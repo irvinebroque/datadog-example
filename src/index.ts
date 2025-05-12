@@ -7,6 +7,8 @@ export class MyDurableObject extends DurableObject {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 
+		console.log(Object.keys(env));
+
 		const configuration = client.createConfiguration({
 			authMethods: {
 				apiKeyAuth: env.DATADOG_API_KEY,
@@ -23,7 +25,7 @@ export class MyDurableObject extends DurableObject {
 				series: [
 					{
 						metric: 'system.load.1',
-						type: 0,
+						type: 2,
 						points: [
 							{
 								timestamp: Math.round(new Date().getTime() / 1000),
@@ -47,7 +49,7 @@ export class MyDurableObject extends DurableObject {
 				.then((data: v2.IntakePayloadAccepted) => {
 					console.log('API called successfully. Returned data: ' + JSON.stringify(data));
 				})
-				.catch((error: any) => console.log(error)),
+				.catch((error: any) => console.error(error)),
 		);
 
 		return `Hello, ${name}!`;
