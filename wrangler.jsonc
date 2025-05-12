@@ -31,4 +31,7 @@
 			"service": "datadog-example-tail-consumer",
 		},
 	],
+	"vars": {
+		"DD_SITE": "us3.datadoghq.com"
+	}
 }
