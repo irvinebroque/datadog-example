@@ -8,10 +8,9 @@ export class MyDurableObject extends DurableObject {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 
-		console.log(Object.keys(env));
-
 		if (!datadog) {
 			const configuration = client.createConfiguration({
+				debug: true,
 				authMethods: {
 					apiKeyAuth: env.DATADOG_API_KEY,
 					appKeyAuth: env.DATADOG_APP_KEY,
@@ -28,8 +27,8 @@ export class MyDurableObject extends DurableObject {
 			body: {
 				series: [
 					{
-						metric: 'cloudflare.worker.example',
-						type: 1,
+						metric: 'system.cpu.user',
+						type: 3,
 						points: [
 							{
 								timestamp: Math.floor(Date.now() / 1000),
