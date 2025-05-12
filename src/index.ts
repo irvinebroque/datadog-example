@@ -1,18 +1,18 @@
-import { DurableObject } from "cloudflare:workers";
-import { client, v2 } from "@datadog/datadog-api-client";
+import { DurableObject } from 'cloudflare:workers';
+import { client, v2 } from '@datadog/datadog-api-client';
 
 export class MyDurableObject extends DurableObject {
 	private apiInstance: v2.MetricsApi;
-	
+
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 
 		const configuration = client.createConfiguration({
 			authMethods: {
-			  apiKeyAuth: env.DATADOG_API_KEY,
-			  appKeyAuth: env.DATADOG_APP_KEY,
+				apiKeyAuth: env.DATADOG_API_KEY,
+				appKeyAuth: env.DATADOG_APP_KEY,
 			},
-		  });
+		});
 		this.apiInstance = new v2.MetricsApi(configuration);
 		this.env = env;
 	}
@@ -20,36 +20,34 @@ export class MyDurableObject extends DurableObject {
 	async sayHello(name: string): Promise<string> {
 		const params: v2.MetricsApiSubmitMetricsRequest = {
 			body: {
-			  series: [
-				{
-				  metric: "cloudflare.do.example",
-				  type: 1,
-				  points: [
+				series: [
 					{
-					  timestamp: Math.round(new Date().getTime() / 1000),
-					  value: 0.7,
+						metric: 'system.load.1',
+						type: 2,
+						points: [
+							{
+								timestamp: Math.round(new Date().getTime() / 1000),
+								value: 0.7,
+							},
+						],
+						resources: [
+							{
+								name: 'dummyhost',
+								type: 'host',
+							},
+						],
 					},
-				  ],
-				  resources: [
-					{
-					  name: "SOME_NAME",
-					  type: "host",
-					},
-				  ],
-				},
-			  ],
+				],
 			},
-		  };
+		};
 
 		this.ctx.waitUntil(
 			this.apiInstance
-			.submitMetrics(params)
-			.then((data: v2.IntakePayloadAccepted) => {
-			  console.log(
-				"API called successfully. Returned data: " + JSON.stringify(data)
-			  );
-			})
-			.catch((error: any) => console.error(error))
+				.submitMetrics(params)
+				.then((data: v2.IntakePayloadAccepted) => {
+					console.log('API called successfully. Returned data: ' + JSON.stringify(data));
+				})
+				.catch((error: any) => console.log(error)),
 		);
 
 		return `Hello, ${name}!`;
@@ -58,9 +56,9 @@ export class MyDurableObject extends DurableObject {
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
-		const id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName("foo");
+		const id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName('foo');
 		const stub = env.MY_DURABLE_OBJECT.get(id);
-		const greeting = await stub.sayHello("world");
+		const greeting = await stub.sayHello('world');
 		return new Response(greeting);
 	},
 } satisfies ExportedHandler<Env>;
