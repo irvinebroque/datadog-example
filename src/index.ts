@@ -23,7 +23,7 @@ export class MyDurableObject extends DurableObject {
 				series: [
 					{
 						metric: 'system.load.1',
-						type: 2,
+						type: 0,
 						points: [
 							{
 								timestamp: Math.round(new Date().getTime() / 1000),
