@@ -28,18 +28,12 @@ export class MyDurableObject extends DurableObject {
 			body: {
 				series: [
 					{
-						metric: 'system.load.1',
-						type: 2,
+						metric: 'cloudflare.worker.example',
+						type: 1,
 						points: [
 							{
-								timestamp: Math.round(new Date().getTime() / 1000),
+								timestamp: Math.floor(Date.now() / 1000),
 								value: 0.7,
-							},
-						],
-						resources: [
-							{
-								name: 'dummyhost',
-								type: 'host',
 							},
 						],
 					},
