@@ -1,21 +1,25 @@
 import { DurableObject } from 'cloudflare:workers';
 import { client, v2 } from '@datadog/datadog-api-client';
 
+let datadog: v2.MetricsApi;
+
 export class MyDurableObject extends DurableObject {
-	private apiInstance: v2.MetricsApi;
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 
 		console.log(Object.keys(env));
 
-		const configuration = client.createConfiguration({
-			authMethods: {
-				apiKeyAuth: env.DATADOG_API_KEY,
-				appKeyAuth: env.DATADOG_APP_KEY,
-			},
-		});
-		this.apiInstance = new v2.MetricsApi(configuration);
+		if (!datadog) {
+			const configuration = client.createConfiguration({
+				authMethods: {
+					apiKeyAuth: env.DATADOG_API_KEY,
+					appKeyAuth: env.DATADOG_APP_KEY,
+				},
+			});
+			datadog = new v2.MetricsApi(configuration);
+		}
+
 		this.env = env;
 	}
 
@@ -44,7 +48,7 @@ export class MyDurableObject extends DurableObject {
 		};
 
 		this.ctx.waitUntil(
-			this.apiInstance
+			datadog
 				.submitMetrics(params)
 				.then((data: v2.IntakePayloadAccepted) => {
 					console.log('API called successfully. Returned data: ' + JSON.stringify(data));
