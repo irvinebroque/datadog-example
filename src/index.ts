@@ -1,14 +1,16 @@
 import { DurableObject } from 'cloudflare:workers';
 import { client, v2 } from '@datadog/datadog-api-client';
 
-let datadog: v2.MetricsApi;
+let datadogMetrics: v2.MetricsApi;
+let datadogLogs: v2.LogsApi;
+let writeMetric: (name: string, value: number) => void;
+let logError: (error: Error) => void;
 
 export class MyDurableObject extends DurableObject {
-
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 
-		if (!datadog) {
+		if (!datadogMetrics) {
 			const configuration = client.createConfiguration({
 				debug: true,
 				authMethods: {
@@ -17,71 +19,83 @@ export class MyDurableObject extends DurableObject {
 				},
 			});
 			configuration.setServerVariables({
-				site: "us3.datadoghq.com"
+				site: 'us3.datadoghq.com',
 			});
-			datadog = new v2.MetricsApi(configuration);
+			datadogMetrics = new v2.MetricsApi(configuration);
+			writeMetric = (name: string, value: number): void => {
+				const params: v2.MetricsApiSubmitMetricsRequest = {
+					body: {
+						series: [
+							{
+								metric: name,
+								type: 3,
+								points: [
+									{
+										timestamp: Math.floor(Date.now() / 1000),
+										value,
+									},
+								],
+							},
+						],
+					},
+				};
+
+				this.ctx.waitUntil(
+					datadogMetrics
+						.submitMetrics(params)
+						.then((data: v2.IntakePayloadAccepted) => {
+							console.log('API called successfully. Returned data: ' + JSON.stringify(data));
+						})
+						.catch((error: any) => console.error(error)),
+				);
+			};
+		}
+
+		if (!datadogLogs) {
+			const configuration = client.createConfiguration({
+				debug: true,
+				authMethods: {
+					apiKeyAuth: env.DATADOG_API_KEY,
+					appKeyAuth: env.DATADOG_APP_KEY,
+				},
+			});
+			configuration.setServerVariables({
+				site: 'us3.datadoghq.com',
+			});
+			datadogLogs = new v2.LogsApi(configuration);
+			logError = (error: Error): void => {
+				const params: v2.LogsApiSubmitLogRequest = {
+					body: [
+						{
+							ddsource: 'cloudflare-worker',
+							ddtags: 'some-tag',
+							hostname: 'some-hostname',
+							message: `${new Date().toISOString()} ERROR ${error.message}`,
+							service: 'my-service',
+						},
+					],
+				};
+				this.ctx.waitUntil(
+					datadogLogs
+						.submitLog(params)
+						.then((data: any) => {
+							console.log('API called successfully. Returned data: ' + JSON.stringify(data));
+						})
+						.catch((error: any) => console.error(error)),
+				);
+			};
 		}
 
 		this.env = env;
 	}
 
 	async sayHello(name: string): Promise<string> {
-		const params: v2.MetricsApiSubmitMetricsRequest = {
-			body: {
-				series: [
-					{
-						metric: 'cloudflare.worker.example',
-						type: 3,
-						points: [
-							{
-								timestamp: Math.floor(Date.now() / 1000),
-								value: 0.7,
-							},
-						],
-					},
-				],
-			},
-		};
-
-
-		// Plain fetch version
-
-		// const payload = {
-		// 	series: [
-		// 	  {
-		// 		metric: "cloudflare.workers.1",
-		// 		type: 0,                                    // 0 = gauge
-		// 		points: [{ timestamp: Math.floor(Date.now() / 1000), value: 0.7 }],
-		// 		resources: [{ name: "dummyhost", type: "host" }],
-		// 	  },
-		// 	],
-		//   };
-
-		//   fetch("https://api.us3.datadoghq.com/api/v2/series", {
-		// 	method: "POST",
-		// 	headers: {
-		// 	  Accept: "application/json",
-		// 	  "Content-Type": "application/json",
-		// 	  "DD-API-KEY": this.env.DATADOG_API_KEY,                // stored as a secret
-		// 	},
-		// 	body: JSON.stringify(payload),
-		//   }).then((res) => res.json()).then((data) => {
-		// 	console.log(data);
-		// }).catch((error) => {
-		// 	console.log("Jfkldsjklfjkldsklj");
-		// 	console.error(error);
-		// })
-
-
-		this.ctx.waitUntil(
-			datadog
-				.submitMetrics(params)
-				.then((data: v2.IntakePayloadAccepted) => {
-					console.log('API called successfully. Returned data: ' + JSON.stringify(data));
-				})
-				.catch((error: any) => console.error(error)),
-		);
-
+		writeMetric('cloudflare.worker.example', 0.7);
+		try {
+			throw new Error('test');
+		} catch (error) {
+			logError(error as Error);
+		}
 		return `Hello, ${name}!`;
 	}
 }

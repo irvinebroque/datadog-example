@@ -32,6 +32,6 @@
 		},
 	],
 	"vars": {
-		"DD_SITE": "us3.datadoghq.com"
-	}
+		"DD_SITE": "us3.datadoghq.com",
+	},
 }
