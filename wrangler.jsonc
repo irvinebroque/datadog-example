@@ -34,4 +34,19 @@
 	"vars": {
 		"DD_SITE": "us3.datadoghq.com",
 	},
+	"queues": {
+		"producers": [
+			{
+				"queue": "datadog-example-queue-metrics",
+				"binding": "DATADOG_EXAMPLE_QUEUE_METRICS",
+			},
+		],
+		"consumers": [
+			{
+				"queue": "datadog-example-queue-metrics",
+				"max_batch_size": 100,
+				"max_batch_timeout": 5
+			}
+		],
+	},
 }

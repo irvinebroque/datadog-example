@@ -39,6 +39,10 @@ export class MyDurableObject extends DurableObject {
 						],
 					},
 				};
+				// Ex 1: send to queue
+				// env.DATADOG_EXAMPLE_QUEUE_METRICS.send(params.body.series[0]);
+
+				// Ex 2: send directly from a Worker:
 
 				this.ctx.waitUntil(
 					datadogMetrics
@@ -101,10 +105,30 @@ export class MyDurableObject extends DurableObject {
 }
 
 export default {
+
 	async fetch(request, env, ctx): Promise<Response> {
 		const id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName('foo');
 		const stub = env.MY_DURABLE_OBJECT.get(id);
 		const greeting = await stub.sayHello('world');
 		return new Response(greeting);
+	},
+
+	async queue(batch, env, ctx) {
+		const series = batch.messages.map((item) => {
+			return item.body as v2.MetricSeries;
+		});
+		console.log('series', series);
+		const params: v2.MetricsApiSubmitMetricsRequest = {
+			body: {
+				series,
+			},
+		};
+
+		try {
+			await datadogMetrics.submitMetrics(params);
+		} catch (error) {
+			console.error(error);
+			batch.retryAll({ delaySeconds: 10 });
+		}
 	},
 } satisfies ExportedHandler<Env>;
